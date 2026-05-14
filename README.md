@@ -95,7 +95,7 @@ pip install -r requirements.txt
 
 # Configurar variables de entorno
 cp .env.example .env
-nano .env   # ← Editar DB_PASSWORD, SECRET_KEY, JWT_SECRET
+nano .env   # ← Editar DB_PASSWORD, SECRET_KEY, JWT_SECRET (import secrets en python recomendado)
 
 # Levantar servidor
 python app.py
@@ -209,29 +209,10 @@ http://<IP_RASPI>:5173   # Desarrollo
 http://<IP_RASPI>:80     # Producción (con nginx)
 ```
 
-### Configurar nginx (producción)
+### Configurar Apache (producción)
 ```bash
-sudo apt install -y nginx
-
-# /etc/nginx/sites-available/clyro
-server {
-    listen 80;
-    root /home/pi/Koffengineers-2026/client/dist;
-    index index.html;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    location /api {
-        proxy_pass http://localhost:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-
-sudo ln -s /etc/nginx/sites-available/clyro /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
+sudo apt install apache2 -y
+hostname -I
 ```
 
 ---
