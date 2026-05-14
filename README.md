@@ -120,6 +120,87 @@ npm run preview   # o servir con nginx
 
 ---
 
+## 🗄️ Arquitectura de Datos
+
+El proyecto utiliza una base de datos relacional para gestionar el flujo de ventas. A continuación se detalla la estructura y relaciones:
+```mermaid
+erDiagram
+    usuarios ||--o{ carrito : tiene
+    usuarios ||--o{ pedidos : realiza
+    categorias ||--o{ productos : organiza
+    productos ||--o{ carrito : incluye
+    productos ||--o{ detalles_pedido : aparece
+    metodos_envio ||--o{ pedidos : se_usa_en
+    pedidos ||--o{ detalles_pedido : contiene
+
+    usuarios {
+        int id_usuario PK
+        string nombre_completo
+        string correo
+        string contrasena_hash
+        enum rol
+        timestamp fecha_registro
+    }
+
+    categorias {
+        int id_categoria PK
+        string nombre
+    }
+
+    productos {
+        int id_producto PK
+        int id_categoria FK
+        string nombre
+        text descripcion
+        decimal precio
+        int stock
+        string imagen_url
+    }
+
+    metodos_envio {
+        int id_metodo PK
+        string nombre
+        decimal costo
+        string tiempo_estimado
+    }
+
+    carrito {
+        int id_carrito PK
+        int id_usuario FK
+        int id_producto FK
+        int cantidad
+    }
+
+    pedidos {
+        int id_pedido PK
+        int id_usuario FK
+        int id_metodo_envio FK
+        string direccion_calle
+        string ciudad
+        string codigo_postal
+        string telefono_contacto
+        decimal total
+        enum estado
+        timestamp fecha_pedido
+    }
+
+    detalles_pedido {
+        int id_detalle PK
+        int id_pedido FK
+        int id_producto FK
+        int cantidad
+        decimal precio_unitario
+    }
+
+
+```
+### Notas Técnicas:
+- **Seguridad:** Las contraseñas se almacenan mediante `contrasena_hash`.
+- **Integridad:** Se utilizan claves foráneas (FK) para asegurar la relación entre pedidos, productos y usuarios.
+- **Escalabilidad:** El diseño permite añadir múltiples métodos de envío y categorías sin afectar la lógica core del negocio.
+---
+
+
 ## 🌐 Acceso en Red Local (Jurado)
 
 ```
