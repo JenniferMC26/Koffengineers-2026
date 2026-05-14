@@ -98,7 +98,7 @@
 - [ ] Grabar video demo de 2 minutos (por si falla la red)
 - [ ] Preparar 3 slides: Problema → Solución → Tech Stack
 - [ ] Merge final a `main`, tag de release `v1.0.0-hackathon`
-- [ ] **DORMIR AL MENOS 2 HORAS** 😴
+- [ ] **DORMIR AL MENOS 2 HORAS** 😴 ( No dormimos (っ °Д °;)っ )
 
 ---
 
@@ -130,9 +130,9 @@ sudo systemctl restart onmyway-api
 ## 📡 Acceso al Entorno
 
 ```
-RasPi IP: _______________  (llenar al inicio del hackathon)
-DB Host: localhost:3306
-DB Name: onmyway_db
+RasPi IP: 192.162.10.5  (llenar al inicio del hackathon)
+DB Host: localhost:5173
+DB Name: clyro_db
 API URL: http://<IP>:5000
 Frontend: http://<IP>:80  (o :5173 en dev)
 ```
