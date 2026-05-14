@@ -1,153 +1,124 @@
--- ============================================================
---  schema.sql — On My Way · MariaDB
---  Ejecutar: mysql -u root -p < schema.sql
--- ============================================================
+-- =====================================================================
+-- SCRIPT DE CREACION DE BASE DE DATOS: CLYRO_DB
+-- EQUIPO: Koffengenieers
+-- PROYECTO MARKETPLACE 
+-- MOTOR: MariaDB 
+-- =====================================================================
 
-CREATE DATABASE IF NOT EXISTS onmyway_db
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
+-- 1. Crear y usar la base de datos
+CREATE DATABASE IF NOT EXISTS clyro_db;
+USE clyro_db;
 
-USE onmyway_db;
+-- 2. Limpieza de tablas (Salvavidas para reiniciar rapido)
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS detalles_pedido, pedidos, carrito, metodos_envio, productos, categorias, usuarios;
+SET FOREIGN_KEY_CHECKS = 1;
 
--- ─── Usuarios ───────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS users (
-    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    name        VARCHAR(100)        NOT NULL,
-    email       VARCHAR(150)        NOT NULL UNIQUE,
-    password    VARCHAR(255)        NOT NULL,       -- bcrypt hash
-    role        ENUM('admin','user') NOT NULL DEFAULT 'user',
-    phone       VARCHAR(20),
-    created_at  TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_email (email)
-) ENGINE=InnoDB;
+-- =====================================================================
+-- CREACION DE TABLAS
+-- =====================================================================
 
--- ─── Categorías ─────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS categories (
-    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    name        VARCHAR(80)  NOT NULL UNIQUE,
-    slug        VARCHAR(80)  NOT NULL UNIQUE,
-    description TEXT,
-    image_url   VARCHAR(500),
-    created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+-- 3. Tabla de Usuarios (Soporta Roles y Hash de Contrasenas)
+CREATE TABLE usuarios (
+    id_usuario INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_completo VARCHAR(100) NOT NULL,
+    correo VARCHAR(100) UNIQUE NOT NULL,
+    contrasena_hash VARCHAR(255) NOT NULL,
+    rol ENUM('admin', 'cliente') DEFAULT 'cliente',
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
--- ─── Productos ──────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS products (
-    id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    category_id  INT UNSIGNED        NOT NULL,
-    name         VARCHAR(200)        NOT NULL,
-    slug         VARCHAR(200)        NOT NULL UNIQUE,
-    description  TEXT,
-    price        DECIMAL(10,2)       NOT NULL,
-    stock        INT UNSIGNED        NOT NULL DEFAULT 0,
-    image_url    VARCHAR(500),
-    is_active    BOOLEAN             NOT NULL DEFAULT TRUE,
-    created_at   TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at   TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT,
-    INDEX idx_category (category_id),
-    INDEX idx_slug (slug),
-    INDEX idx_active (is_active)
-) ENGINE=InnoDB;
+-- 4. Tabla de Categorias
+CREATE TABLE categorias (
+    id_categoria INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE
+);
 
--- ─── Métodos de Envío ───────────────────────────────────────
-CREATE TABLE IF NOT EXISTS shipping_methods (
-    id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    name         VARCHAR(100) NOT NULL,
-    description  VARCHAR(255),
-    price        DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    estimated_days_min INT UNSIGNED DEFAULT 1,
-    estimated_days_max INT UNSIGNED DEFAULT 5,
-    is_active    BOOLEAN NOT NULL DEFAULT TRUE
-) ENGINE=InnoDB;
+-- 5. Tabla de Productos (Catalogo y Stock)
+CREATE TABLE productos (
+    id_producto INT AUTO_INCREMENT PRIMARY KEY,
+    id_categoria INT NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    precio DECIMAL(10,2) NOT NULL,
+    stock INT NOT NULL DEFAULT 0,
+    imagen_url VARCHAR(255),
+    FOREIGN KEY (id_categoria) REFERENCES categorias(id_categoria) ON DELETE RESTRICT
+);
 
--- ─── Carritos ───────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS carts (
-    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    user_id     INT UNSIGNED NOT NULL UNIQUE,
-    created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+-- 6. Tabla de Metodos de Envio (Cumple con el requisito de 2 modalidades)
+CREATE TABLE metodos_envio (
+    id_metodo INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    costo DECIMAL(10,2) NOT NULL,
+    tiempo_estimado VARCHAR(50)
+);
 
-CREATE TABLE IF NOT EXISTS cart_items (
-    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    cart_id     INT UNSIGNED NOT NULL,
-    product_id  INT UNSIGNED NOT NULL,
-    quantity    INT UNSIGNED NOT NULL DEFAULT 1,
-    added_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (cart_id)    REFERENCES carts(id)    ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_cart_product (cart_id, product_id)
-) ENGINE=InnoDB;
+-- 7. Tabla del Carrito (Para persistencia de datos)
+CREATE TABLE carrito (
+    id_carrito INT AUTO_INCREMENT PRIMARY KEY,
+    id_usuario INT NOT NULL,
+    id_producto INT NOT NULL,
+    cantidad INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    FOREIGN KEY (id_producto) REFERENCES productos(id_producto) ON DELETE CASCADE
+);
 
--- ─── Órdenes ────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS orders (
-    id                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    user_id            INT UNSIGNED    NOT NULL,
-    shipping_method_id INT UNSIGNED    NOT NULL,
-    status             ENUM('pending','processing','shipped','delivered','cancelled')
-                                       NOT NULL DEFAULT 'pending',
-    -- Dirección de entrega (snapshot al momento de la compra)
-    shipping_name      VARCHAR(150)    NOT NULL,
-    shipping_address   VARCHAR(300)    NOT NULL,
-    shipping_city      VARCHAR(100)    NOT NULL,
-    shipping_zip       VARCHAR(20),
-    shipping_phone     VARCHAR(20),
-    -- Totales
-    subtotal           DECIMAL(10,2)   NOT NULL,
-    shipping_cost      DECIMAL(10,2)   NOT NULL DEFAULT 0.00,
-    total              DECIMAL(10,2)   NOT NULL,
-    notes              TEXT,
-    created_at         TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at         TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id)            REFERENCES users(id)            ON DELETE RESTRICT,
-    FOREIGN KEY (shipping_method_id) REFERENCES shipping_methods(id) ON DELETE RESTRICT,
-    INDEX idx_user   (user_id),
-    INDEX idx_status (status)
-) ENGINE=InnoDB;
+-- 8. Tabla de Pedidos (Checkout y Datos de Envio)
+CREATE TABLE pedidos (
+    id_pedido INT AUTO_INCREMENT PRIMARY KEY,
+    id_usuario INT NOT NULL,
+    id_metodo_envio INT NOT NULL,
+    direccion_calle VARCHAR(255) NOT NULL, 
+    ciudad VARCHAR(100) NOT NULL,
+    codigo_postal VARCHAR(10) NOT NULL,
+    telefono_contacto VARCHAR(20) NOT NULL,
+    total DECIMAL(10,2) NOT NULL,
+    estado ENUM('pendiente', 'pagado', 'enviado', 'entregado') DEFAULT 'pendiente',
+    fecha_pedido TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE RESTRICT,
+    FOREIGN KEY (id_metodo_envio) REFERENCES metodos_envio(id_metodo) ON DELETE RESTRICT
+);
 
-CREATE TABLE IF NOT EXISTS order_items (
-    id          INT UNSIGNED   AUTO_INCREMENT PRIMARY KEY,
-    order_id    INT UNSIGNED   NOT NULL,
-    product_id  INT UNSIGNED   NOT NULL,
-    quantity    INT UNSIGNED   NOT NULL,
-    unit_price  DECIMAL(10,2)  NOT NULL,   -- precio al momento de la compra
-    subtotal    DECIMAL(10,2)  NOT NULL,
-    FOREIGN KEY (order_id)   REFERENCES orders(id)   ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+-- 9. Tabla de Detalles del Pedido
+CREATE TABLE detalles_pedido (
+    id_detalle INT AUTO_INCREMENT PRIMARY KEY,
+    id_pedido INT NOT NULL,
+    id_producto INT NOT NULL,
+    cantidad INT NOT NULL,
+    precio_unitario DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (id_pedido) REFERENCES pedidos(id_pedido) ON DELETE CASCADE,
+    FOREIGN KEY (id_producto) REFERENCES productos(id_producto) ON DELETE RESTRICT
+);
 
--- ============================================================
---  DATOS SEMILLA
--- ============================================================
+-- =====================================================================
+-- DATOS SEMILLA (Informacion precargada y pruebas previas)
+-- =====================================================================
 
--- Categorías
-INSERT INTO categories (name, slug, description) VALUES
-('Electrónica',  'electronica',  'Gadgets, accesorios y dispositivos'),
-('Ropa',         'ropa',         'Moda para hombre y mujer'),
-('Hogar',        'hogar',        'Todo para tu casa'),
-('Deportes',     'deportes',     'Equipamiento y ropa deportiva'),
-('Libros',       'libros',       'Ficción, técnicos y más');
+-- Categorias base (6 categorias para marketplace minimalista)
+INSERT INTO categorias (nombre) VALUES 
+('Tecnología'), 
+('Hogar'), 
+('Moda'), 
+('Salud'), 
+('Deporte'), 
+('Vehículos');
 
--- Métodos de envío
-INSERT INTO shipping_methods (name, description, price, estimated_days_min, estimated_days_max) VALUES
-('Estándar',  'Envío regular',          49.00, 5, 7),
-('Express',   'Entrega en 1-2 días',   149.00, 1, 2),
-('Recolectar','Recoger en tienda',        0.00, 0, 0);
+-- Los 2 metodos de envio requeridos:
+INSERT INTO metodos_envio (nombre, costo, tiempo_estimado) 
+VALUES ('Envio Estandar', 99.00, '3 a 5 dias habiles'), 
+       ('Envio Expres', 199.00, 'Mismo dia');
 
--- Admin inicial  (password: Admin123! — cambiar en producción)
--- Hash bcrypt generado con: python -c "import bcrypt; print(bcrypt.hashpw(b'Admin123!', bcrypt.gensalt()).decode())"
-INSERT INTO users (name, email, password, role) VALUES
-('Admin', 'admin@onmyway.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TiGfOfmOKSGm8vQmRFZvxdh7IWEi', 'admin');
+-- Usuarios de prueba
+-- Contraseñas: adminangel→'kofeengineers' | josej2→'123'
+INSERT INTO usuarios (nombre_completo, correo, contrasena_hash, rol) VALUES
+('adminangel', 'adminangel@gmail.com', '$2b$12$2vwS5lCS/A8N9O3jGaqQ4epzwKF9zscBD9QQhmEc9KVvF3X4GY2eu', 'admin'),
+('Jose Juarez', 'josej2@gmail.com', '$2b$12$bJr/PXVdUoW4NsBg2n1D6uXQcpt1iob7MR6BafbJp4HIDk0f1JU5y', 'cliente');
 
--- Productos de muestra
-INSERT INTO products (category_id, name, slug, description, price, stock, image_url) VALUES
-(1, 'Auriculares Bluetooth Pro', 'auriculares-bluetooth-pro', 'Sonido envolvente, batería 30h', 899.00, 50, 'https://picsum.photos/seed/p1/400/400'),
-(1, 'Cargador USB-C 65W',        'cargador-usb-c-65w',        'Carga rápida para laptop y móvil', 299.00, 100,'https://picsum.photos/seed/p2/400/400'),
-(2, 'Playera Algodón Orgánico',  'playera-algodon-organico',  '100% algodón sustentable',         199.00, 80, 'https://picsum.photos/seed/p3/400/400'),
-(2, 'Sudadera Hoodie Premium',   'sudadera-hoodie-premium',   'Fleece suave, bolsa canguro',       549.00, 40, 'https://picsum.photos/seed/p4/400/400'),
-(3, 'Lámpara LED Escritorio',    'lampara-led-escritorio',    'Ajuste de brillo y temperatura',    349.00, 30, 'https://picsum.photos/seed/p5/400/400'),
-(4, 'Botella Térmica 1L',        'botella-termica-1l',        'Mantiene frío 24h / calor 12h',     229.00, 60, 'https://picsum.photos/seed/p6/400/400'),
-(5, 'Python Crash Course',       'python-crash-course',       'Aprende Python desde cero',         350.00, 25, 'https://picsum.photos/seed/p7/400/400');
+-- Productos de prueba
+INSERT INTO productos (id_categoria, nombre, descripcion, precio, stock, imagen_url) VALUES 
+(1, 'Laptop Pro 14', 'Procesador de ultima generacion, 16GB RAM', 25000.00, 10, 'https://cityshop.mx/assets/imagenes/productos/cityshop-pv14250_i5rplr16512pwps_1w-2v2pw-nb-dell-pro-14-pv14250_i5rplr16512pwps_1w_0.webp'),
+(1, 'Audifonos Wireless', 'Cancelacion de ruido activa', 3500.00, 25, 'https://m.media-amazon.com/images/I/41VEMU8feUL._AC_SX300_SY300_QL70_ML2_.jpg');
+
+-- Simulación de Carrito (Jose Juarez tiene la Laptop en su carrito)
+INSERT INTO carrito (id_usuario, id_producto, cantidad) VALUES (2, 1, 1);
