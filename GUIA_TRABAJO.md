@@ -130,9 +130,9 @@ sudo systemctl restart onmyway-api
 ## 📡 Acceso al Entorno
 
 ```
-RasPi IP: 192.162.10.5  (llenar al inicio del hackathon)
+RasPi IP: 192.168.10.5
 DB Host: localhost:5173
 DB Name: clyro_db
-API URL: http://<IP>:5000
-Frontend: http://<IP>:80  (o :5173 en dev)
+API URL: http://192.168.10.5:5173
+Frontend: http://192.168.10.5:80  (o :5173 en dev)
 ```
