@@ -28,6 +28,7 @@ import NotFoundPage       from '../pages/NotFoundPage'
 
 // ── Protected pages ───────────────────────────────────────
 import CheckoutPage       from '../features/checkout/pages/CheckoutPage'
+import AccountPage        from '../features/account/pages/AccountPage'
 import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage'
 
 const router = createBrowserRouter([
@@ -40,11 +41,13 @@ const router = createBrowserRouter([
       { path: '/product/:id',element: <ProductPage /> },
       { path: '/cart',       element: <CartPage />    },
 
-      /* ── Checkout: requires authentication ── */
+      { path: '/checkout', element: <CheckoutPage /> },
+
+      /* ── Rutas que requieren autenticación ── */
       {
         element: <ProtectedRoute />,
         children: [
-          { path: '/checkout', element: <CheckoutPage /> },
+          { path: '/account', element: <AccountPage /> },
         ],
       },
     ],

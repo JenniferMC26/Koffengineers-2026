@@ -1,18 +1,40 @@
 /**
  * CLYRO — Catalog API
  * Thin wrappers over the shared Axios instance.
- * All endpoint paths match the Flask backend contract in the design spec.
+ * Normalizes backend Spanish field names to the English names used by components.
  */
 import api from '../../lib/api'
 
-/** GET /api/products?search=&category=&page= */
+/* Mapea un producto del backend al shape esperado por los componentes */
+function normalizeProduct(p) {
+  return {
+    id:          p.id_producto,
+    name:        p.nombre,
+    price:       parseFloat(p.precio),
+    image_url:   p.imagen_url,
+    category:    p.categoria,
+    description: p.descripcion,
+    stock:       p.stock,
+    // El backend no tiene slug; usamos el id como identificador de ruta
+    slug:        String(p.id_producto),
+  }
+}
+
+/** GET /api/productos?search=&category=&page= */
 export const getProducts = (params = {}) =>
-  api.get('/products', { params }).then(r => r.data)
+  api.get('/productos', { params }).then(r => {
+    const raw  = r.data
+    const list = Array.isArray(raw) ? raw : (raw.data ?? [])
+    return list.map(normalizeProduct)
+  })
 
-/** GET /api/products/:slug */
-export const getProduct = (slug) =>
-  api.get(`/products/${slug}`).then(r => r.data)
+/** GET /api/productos/:id */
+export const getProduct = (id) =>
+  api.get(`/productos/${id}`).then(r => normalizeProduct(r.data))
 
-/** GET /api/categories */
+/** GET /api/categorias */
 export const getCategories = () =>
-  api.get('/categories').then(r => r.data)
+  api.get('/categorias').then(r => {
+    const list = Array.isArray(r.data) ? r.data : []
+    return list.map(c => ({ id: c.id_categoria, name: c.nombre }))
+  })

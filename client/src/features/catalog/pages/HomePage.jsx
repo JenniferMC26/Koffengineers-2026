@@ -208,6 +208,47 @@ export default function HomePage() {
       </div>
 
       {/* ════════════════════════════════════════════════════
+          PROMO STRIP — Blink Galaxy
+          ════════════════════════════════════════════════════ */}
+      <a
+        href="https://blinkgalaxy.com"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16,
+          padding: '18px clamp(24px,5vw,60px)',
+          background: 'var(--c2)',
+          borderTop: '0.5px solid var(--b)', borderBottom: '0.5px solid var(--b)',
+          textDecoration: 'none',
+          transition: 'background .2s',
+          cursor: 'pointer',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--c3)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'var(--c2)'}
+        aria-label="Descuento exclusivo en Blink Galaxy"
+      >
+        <span style={{
+          fontSize: 9, letterSpacing: '.18em', textTransform: 'uppercase',
+          color: 'var(--i4)', fontFamily: "'DM Sans', sans-serif",
+        }}>
+          oferta exclusiva
+        </span>
+        <span style={{ width: 1, height: 12, background: 'var(--b)', flexShrink: 0 }} />
+        <span style={{
+          fontSize: 13, color: 'var(--ink)', fontFamily: "'DM Sans', sans-serif",
+          fontWeight: 400,
+        }}>
+          Obtén un descuento especial con Blink Galaxy
+        </span>
+        <span style={{
+          fontSize: 11, color: 'var(--i3)', fontFamily: "'DM Sans', sans-serif",
+          display: 'flex', alignItems: 'center', gap: 4,
+        }}>
+          Ver oferta <IconArrowRight size={12} stroke={1.5} />
+        </span>
+      </a>
+
+      {/* ════════════════════════════════════════════════════
           FEATURED PRODUCTS
           ════════════════════════════════════════════════════ */}
       <section

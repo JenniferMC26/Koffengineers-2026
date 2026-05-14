@@ -31,7 +31,7 @@ import { Toaster } from 'sonner'
 import { useAuth } from '../../../context/AuthContext'
 import OrdersView   from '../components/OrdersView'
 import ProductsView from '../components/ProductsView'
-import { getAdminStats, getAdminOrders } from '../api'
+import { getAdminOrders } from '../api'
 import { STATUS_META, btnXs } from '../adminUtils'
 export { STATUS_META, btnXs }
 
@@ -220,12 +220,10 @@ function DashboardView({ onNavigate, user }) {
   const [orders, setOrders] = useState(MOCK_ORDERS)
 
   useEffect(() => {
-    getAdminStats()
-      .then(data => setStats(prev => ({ ...prev, ...data })))
-      .catch(() => {})
+    // Sin endpoint de stats en el backend; se usan los mocks como referencia
     getAdminOrders()
       .then(data => {
-        const list = Array.isArray(data) ? data : (data?.orders ?? [])
+        const list = Array.isArray(data) ? data : []
         if (list.length) setOrders(list.slice(0, 5))
       })
       .catch(() => {})

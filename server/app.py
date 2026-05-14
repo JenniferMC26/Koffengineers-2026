@@ -27,6 +27,7 @@ def create_app():
     from routes import (
         auth_routes, product_routes, cart_routes,
         order_routes, shipping_routes, admin_routes,
+        notify_routes,
     )
     app.register_blueprint(auth_routes.bp)
     app.register_blueprint(product_routes.bp)
@@ -34,6 +35,7 @@ def create_app():
     app.register_blueprint(order_routes.bp)
     app.register_blueprint(shipping_routes.bp)
     app.register_blueprint(admin_routes.bp)
+    app.register_blueprint(notify_routes.bp)
 
     @app.get("/admin")
     def admin_panel():

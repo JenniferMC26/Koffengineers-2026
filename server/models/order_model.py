@@ -8,19 +8,19 @@ from database import get_db
 VALID_STATUSES = {"pendiente", "pagado", "enviado", "entregado"}
 
 
-def create(user_id, shipping_method_id, shipping_data, items, total) -> int:
+def create(user_id, shipping_method_id, shipping_data, items, total, metodo_pago=None) -> int:
     db = get_db()
     with db.cursor() as cur:
         cur.execute(
             """INSERT INTO pedidos
                (id_usuario, id_metodo_envio, direccion_calle, ciudad,
-                codigo_postal, telefono_contacto, total, estado)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, 'pendiente')""",
+                codigo_postal, telefono_contacto, total, estado, metodo_pago)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, 'pendiente', %s)""",
             (
                 user_id, shipping_method_id,
                 shipping_data["direccion_calle"], shipping_data["ciudad"],
                 shipping_data["codigo_postal"], shipping_data["telefono_contacto"],
-                total,
+                total, metodo_pago,
             ),
         )
         order_id = cur.lastrowid

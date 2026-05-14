@@ -9,8 +9,8 @@
  *   • Empty state with sage illustration text
  *
  * Data:
- *   GET /api/products?search=&category=&page=  (400ms debounce on search)
- *   GET /api/categories
+ *   GET /api/productos?search=&category=&page=  (400ms debounce on search)
+ *   GET /api/categorias
  *   Falls back to MOCK data if API unavailable.
  * ──────────────────────────────────────────────────────────────
  */
@@ -36,7 +36,10 @@ export default function CatalogPage() {
   const [searchInput, setSearchInput] = useState(searchParams.get('search') || '')
   const [activeCategory, setActiveCategory] = useState(searchParams.get('category') || 'Todos')
 
-  const debounceRef = useRef(null)
+  const debounceRef   = useRef(null)
+  // Ref para que fetchProducts acceda a categorías sin quedar con closure stale
+  const categoriesRef = useRef([])
+  useEffect(() => { categoriesRef.current = categories }, [categories])
 
   /* ── Load categories once ────────────────────────────────── */
   useEffect(() => {
@@ -48,14 +51,18 @@ export default function CatalogPage() {
   /* ── Load products ──────────────────────────────────────── */
   const fetchProducts = useCallback(async (search, category) => {
     setLoading(true)
-    const params = { page: 1, limit: PAGE_SIZE }
-    if (search)   params.search   = search
-    if (category && category !== 'Todos') params.category = category
+    const params = { page: 1, per_page: PAGE_SIZE }
+    if (search) params.search = search
+    if (category && category !== 'Todos') {
+      // El backend filtra por id_categoria (entero)
+      const cat = categoriesRef.current.find(c => c.name === category)
+      if (cat) params.category = cat.id
+    }
 
     try {
       const data = await getProducts(params)
-      const list = Array.isArray(data) ? data : data.products ?? []
-      setProducts(list)
+      // getProducts ya devuelve un array normalizado
+      setProducts(Array.isArray(data) ? data : [])
     } catch {
       // Filter mock data locally
       let list = [...MOCK_PRODUCTS]
@@ -235,7 +242,7 @@ export default function CatalogPage() {
             <ProductCard
               key={p.id}
               product={p}
-              onClick={() => navigate(`/product/${p.slug}`)}
+              onClick={() => navigate(`/product/${p.id}`)}
             />
           ))}
         </div>

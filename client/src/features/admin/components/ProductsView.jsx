@@ -17,44 +17,57 @@ import {
   IconTrash,
 } from '@tabler/icons-react'
 import { toast } from 'sonner'
+import api from '../../../lib/api'
 import { getAdminProducts, createAdminProduct, updateAdminProduct, deleteAdminProduct } from '../api'
 import { btnXs } from '../adminUtils.js'
 
 /* ── Mock fallback ───────────────────────────────────────── */
 const MOCK_PRODUCTS = [
-  { id: 1,  name: 'Auriculares Bluetooth Pro',   category: 'Electrónica', price: 899, stock: 50, description: 'Sonido envolvente, batería 30h, cancelación de ruido.', image_url: '' },
-  { id: 2,  name: 'Lámpara LED Escritorio',       category: 'Hogar',       price: 349, stock: 30, description: 'Luz cálida ajustable, diseño minimalista.', image_url: '' },
-  { id: 3,  name: 'Sudadera Hoodie Premium',      category: 'Moda',        price: 549, stock: 3,  description: 'Algodón 100%, corte oversized.', image_url: '' },
-  { id: 4,  name: 'Botella Térmica 1L',           category: 'Deporte',     price: 229, stock: 60, description: 'Acero inoxidable, mantiene temperatura 24h.', image_url: '' },
-  { id: 5,  name: 'Python Crash Course',          category: 'Libros',      price: 350, stock: 25, description: 'Aprende Python desde cero.', image_url: '' },
-  { id: 6,  name: 'Cargador USB-C 65W',           category: 'Electrónica', price: 299, stock: 40, description: 'Carga rápida compatible con todos los dispositivos.', image_url: '' },
+  { id: 1,  name: 'Auriculares Bluetooth Pro',   category: 'Tecnología', price: 899, stock: 50, description: 'Sonido envolvente, batería 30h, cancelación de ruido.', image_url: '' },
+  { id: 2,  name: 'Lámpara LED Escritorio',       category: 'Hogar',      price: 349, stock: 30, description: 'Luz cálida ajustable, diseño minimalista.', image_url: '' },
 ]
 
-const CATEGORIES = ['Electrónica', 'Hogar', 'Moda', 'Deporte', 'Libros', 'Otro']
+const DEFAULT_CATEGORIES = [
+  { id: 1, name: 'Tecnología' }, { id: 2, name: 'Hogar' },
+  { id: 3, name: 'Moda' }, { id: 4, name: 'Salud' },
+  { id: 5, name: 'Deporte' }, { id: 6, name: 'Vehículos' },
+]
 
 const LOW_STOCK = 5
 
 const BLANK_FORM = {
   name: '', description: '', price: '', old_price: '',
-  stock: '', category: 'Electrónica', image_url: '',
+  stock: '', category: '', image_url: '',
 }
 
 /* ═══════════════════════════════════════════════════════════ */
 export default function ProductsView() {
-  const [products,  setProducts]  = useState(MOCK_PRODUCTS)
-  const [loading,   setLoading]   = useState(true)
-  const [selected,  setSelected]  = useState(MOCK_PRODUCTS[0])   // product being edited (null = new)
-  const [form,      setForm]      = useState(toForm(MOCK_PRODUCTS[0]))
-  const [saving,    setSaving]    = useState(false)
-  const [deleting,  setDeleting]  = useState(false)
-  const [confirmDel,setConfirmDel]= useState(false)
-  const [isNew,     setIsNew]     = useState(false)
+  const [products,   setProducts]   = useState(MOCK_PRODUCTS)
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES)
+  const [loading,    setLoading]    = useState(true)
+  const [selected,   setSelected]   = useState(MOCK_PRODUCTS[0])
+  const [form,       setForm]       = useState(toForm(MOCK_PRODUCTS[0]))
+  const [saving,     setSaving]     = useState(false)
+  const [deleting,   setDeleting]   = useState(false)
+  const [confirmDel, setConfirmDel] = useState(false)
+  const [isNew,      setIsNew]      = useState(false)
+
+  /* Cargar categorías reales de la BD */
+  useEffect(() => {
+    api.get('/categorias')
+      .then(({ data }) => {
+        if (Array.isArray(data) && data.length) {
+          setCategories(data.map(c => ({ id: c.id_categoria, name: c.nombre })))
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const load = () => {
     setLoading(true)
     getAdminProducts()
       .then(data => {
-        const list = Array.isArray(data) ? data : (data?.products ?? [])
+        const list = Array.isArray(data) ? data : []
         if (list.length) {
           setProducts(list)
           const first = list[0]
@@ -96,33 +109,33 @@ export default function ProductsView() {
       return
     }
     setSaving(true)
+    // Buscar el id_categoria por nombre de categoría seleccionada
+    const cat = categories.find(c => c.name === form.category)
+    if (!cat) {
+      toast.error('Selecciona una categoría válida')
+      setSaving(false)
+      return
+    }
     const payload = {
-      name:        form.name.trim(),
-      description: form.description.trim(),
-      price:       parseFloat(form.price),
-      old_price:   form.old_price ? parseFloat(form.old_price) : null,
-      stock:       parseInt(form.stock) || 0,
-      category:    form.category,
-      image_url:   form.image_url.trim() || null,
+      id_categoria: cat.id,
+      name:         form.name.trim(),
+      description:  form.description.trim(),
+      price:        parseFloat(form.price),
+      stock:        parseInt(form.stock) || 0,
+      image_url:    form.image_url.trim() || null,
     }
     try {
       if (isNew) {
-        const created = await createAdminProduct(payload)
-        const newProduct = created?.product ?? { ...payload, id: Date.now() }
-        setProducts(prev => [newProduct, ...prev])
-        setSelected(newProduct)
-        setForm(toForm(newProduct))
-        setIsNew(false)
-        toast.success('Producto creado ✓')
+        await createAdminProduct(payload)
       } else {
-        const updated = await updateAdminProduct(selected.id, payload)
-        const newProduct = updated?.product ?? { ...selected, ...payload }
-        setProducts(prev => prev.map(p => p.id === selected.id ? newProduct : p))
-        setSelected(newProduct)
-        toast.success('Producto actualizado ✓')
+        await updateAdminProduct(selected.id, payload)
       }
+      // Recargar lista para obtener datos normalizados del servidor
+      load()
+      toast.success(isNew ? 'Producto creado ✓' : 'Producto actualizado ✓')
+      setIsNew(false)
     } catch (err) {
-      toast.error(err.response?.data?.message ?? 'Error al guardar el producto')
+      toast.error(err.response?.data?.error ?? 'Error al guardar el producto')
     } finally {
       setSaving(false)
     }
@@ -275,7 +288,8 @@ export default function ProductsView() {
               </EditField>
               <EditField label="Categoría">
                 <select className="efi" value={form.category} onChange={set('category')}>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  <option value="">Seleccionar…</option>
+                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
               </EditField>
             </div>
@@ -481,7 +495,7 @@ function toForm(p) {
     price:       p.price       ?? '',
     old_price:   p.old_price   ?? '',
     stock:       p.stock       ?? '',
-    category:    p.category    ?? 'Electrónica',
+    category:    p.category    ?? '',
     image_url:   p.image_url   ?? '',
   }
 }

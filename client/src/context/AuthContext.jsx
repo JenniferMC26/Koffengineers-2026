@@ -43,6 +43,17 @@ function decodePayload(token) {
   }
 }
 
+/* ── Normaliza usuario del backend (campos en español → inglés) */
+function normalizeUser(u) {
+  if (!u) return null
+  return {
+    id:    u.id_usuario ?? u.id,
+    name:  u.nombre_completo ?? u.name ?? '',
+    email: u.correo ?? u.email ?? '',
+    role:  u.rol ?? u.role ?? 'client',
+  }
+}
+
 /* ── Provider ────────────────────────────────────────────── */
 export function AuthProvider({ children }) {
   const [user,      setUser]      = useState(null)
@@ -82,7 +93,7 @@ export function AuthProvider({ children }) {
       try {
         const { data } = await api.get('/auth/me')
         if (isMounted.current) {
-          hydrateFromToken(storedToken, data)
+          hydrateFromToken(storedToken, normalizeUser(data))
         }
       } catch {
         // 401 already handled by interceptor (wipes token)
@@ -98,8 +109,8 @@ export function AuthProvider({ children }) {
     const handle = () => {
       if (isMounted.current) {
         wipeAuth()
-        // Navigate to /login — use location replace to avoid history entry
-        window.location.replace('/login')
+        // ProtectedRoute detecta isAuthenticated=false y redirige via React Router
+        // sin full-page reload (que cancelaría requests en vuelo y destruiría el estado)
       }
     }
     window.addEventListener('clyro:logout', handle)
@@ -108,17 +119,21 @@ export function AuthProvider({ children }) {
 
   /* ── login ────────────────────────────────────────────── */
   const login = useCallback(async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password })
-    // data = { token, user: { id, name, email, role } }
-    hydrateFromToken(data.token, data.user)
+    // Backend espera "correo" (no "email") y devuelve "usuario" (no "user")
+    const { data } = await api.post('/auth/login', { correo: email, password })
+    hydrateFromToken(data.token, normalizeUser(data.usuario))
     return data
   }, [hydrateFromToken])
 
   /* ── register ─────────────────────────────────────────── */
   const register = useCallback(async (formData) => {
-    const { data } = await api.post('/auth/register', formData)
-    // Backend returns token on register → auto-login
-    hydrateFromToken(data.token, data.user)
+    // Backend espera "nombre_completo" y "correo" (no "name" y "email")
+    const { data } = await api.post('/auth/register', {
+      nombre_completo: formData.name,
+      correo:          formData.email,
+      password:        formData.password,
+    })
+    hydrateFromToken(data.token, normalizeUser(data.usuario))
     return data
   }, [hydrateFromToken])
 

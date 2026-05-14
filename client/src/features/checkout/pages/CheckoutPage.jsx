@@ -5,76 +5,137 @@
  *   Left  — formulario de entrega + selector de envío
  *   Right — order-panel sticky con resumen dinámico
  *
- * Shipping methods (obligatorios):
- *   • Estándar  $49   5–7 días hábiles
- *   • Express   $149  1–2 días hábiles
- *
- * Submits POST /api/orders → toast → clearCart → redirect
+ * Shipping methods: GET /api/envios (dinámico desde BD)
+ * Submits POST /api/pedidos → toast → clearCart → redirect
  * JWT se inyecta automáticamente via el interceptor de api.js
  * ──────────────────────────────────────────────────────────────
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   IconArrowLeft,
+  IconCheck,
   IconLoader2,
   IconLock,
+  IconReceipt,
   IconShoppingBag,
 } from '@tabler/icons-react'
 import { toast, Toaster } from 'sonner'
 import api from '../../../lib/api'
+import { useAuth } from '../../../context/AuthContext'
 import { useCart } from '../../../context/CartContext'
 
-/* ── Shipping options ────────────────────────────────────── */
-const SHIP_OPTS = [
-  { id: 'standard', label: 'Estándar', eta: '5–7 días hábiles', price: 49  },
-  { id: 'express',  label: 'Express',  eta: '1–2 días hábiles', price: 149 },
+const PAYMENT_METHODS = [
+  { id: 'Tarjeta crédito/débito', label: 'Tarjeta crédito / débito' },
+  { id: 'Transferencia SPEI',     label: 'Transferencia SPEI'       },
+  { id: 'OXXO',                   label: 'OXXO Pay'                 },
+  { id: 'PayPal',                 label: 'PayPal'                   },
 ]
 
 /* ═══════════════════════════════════════════════════════════ */
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart()
+  const { user } = useAuth()
   const navigate = useNavigate()
 
-  const [form,     setForm]     = useState({ name: '', phone: '', address: '', city: '', postal: '' })
-  const [shipping, setShipping] = useState('standard')
-  const [loading,  setLoading]  = useState(false)
+  const [form,          setForm]          = useState({ name: '', phone: '', address: '', city: '', postal: '' })
+  const [shippingOpts,  setShippingOpts]  = useState([])
+  const [shipping,      setShipping]      = useState(null)
+  const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0].id)
+  const [loading,       setLoading]       = useState(false)
+  const [receipt,       setReceipt]       = useState(null) // null = formulario, {...} = recibo
 
-  const shippingCost = SHIP_OPTS.find(o => o.id === shipping)?.price ?? 0
-  const total        = subtotal + shippingCost
+  /* ── Cargar métodos de envío reales desde la BD ─────────── */
+  useEffect(() => {
+    api.get('/envios')
+      .then(({ data }) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setShippingOpts(data)
+          setShipping(data[0].id_metodo)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const selectedMethod = shippingOpts.find(o => o.id_metodo === shipping)
+  const shippingCost   = parseFloat(selectedMethod?.costo ?? 0)
+  const total          = subtotal + shippingCost
 
   const field = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!items.length) {
-      toast.error('Tu carrito está vacío')
-      return
-    }
+    if (!items.length)          { toast.error('Tu carrito está vacío'); return }
+    if (!shipping)              { toast.error('Selecciona un método de envío'); return }
+    if (!form.phone.trim())     { toast.error('El teléfono es obligatorio'); return }
+    if (!form.postal.trim())    { toast.error('El código postal es obligatorio'); return }
+
     setLoading(true)
     try {
-      const { data } = await api.post('/orders', {
-        items:            items.map(i => ({ product_id: i.id, qty: i.qty, price: i.price })),
-        shipping_method:  shipping,
-        shipping_cost:    shippingCost,
-        shipping_address: form,
-        total,
+      const { data } = await api.post('/pedidos', {
+        id_metodo_envio:   shipping,
+        metodo_pago:       paymentMethod,
+        direccion_calle:   form.address,
+        ciudad:            form.city,
+        codigo_postal:     form.postal,
+        telefono_contacto: form.phone,
+        items: items.map(item => ({
+          id_producto: item.id,
+          cantidad:    item.qty,
+          precio:      item.price,
+          nombre:      item.name,
+        })),
       })
-      toast.success(`¡Orden confirmada! Pedido #${data?.order_id ?? new Date().getFullYear() + '-' + String(Date.now()).slice(-4)}`)
+
+      const orderId = data?.id_pedido
+
+      const receiptData = {
+        orderId,
+        items:          [...items],
+        subtotal,
+        shippingCost,
+        total,
+        shippingMethod: selectedMethod?.nombre ?? '',
+        eta:            selectedMethod?.tiempo_estimado ?? '',
+        paymentMethod,
+        form:           { ...form },
+      }
+
       clearCart()
-      setTimeout(() => navigate('/'), 1600)
+
+      // Enviar email vía backend (no bloqueante)
+      api.post('/notify/receipt', {
+        order_id:        orderId,
+        customer_name:   user?.name ?? (form.name || ''),
+        customer_email:  user?.email ?? '',
+        items:           items.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
+        subtotal,
+        shipping_cost:   shippingCost,
+        total,
+        shipping_method: selectedMethod?.nombre ?? '',
+        eta:             selectedMethod?.tiempo_estimado ?? '',
+        address:         `${form.address}, ${form.city}, CP ${form.postal}`,
+        payment_method:  paymentMethod,
+      }).catch(() => {})
+
+      setReceipt(receiptData)
+
     } catch (err) {
-      toast.error(err.response?.data?.message ?? 'Error al procesar tu orden. Intenta de nuevo.')
+      toast.error(err.response?.data?.error ?? 'Error al procesar tu orden. Intenta de nuevo.')
     } finally {
       setLoading(false)
     }
   }
 
+  /* ── Vista de recibo post-compra ────────────────────────── */
+  if (receipt) return <ReceiptView receipt={receipt} user={user} onAccount={() => navigate('/account')} />
+
   return (
     <>
       <Toaster
-        position="bottom-right"
+        position="top-center"
         toastOptions={{
+          duration: 5000,
           style: { fontFamily: "'DM Sans',sans-serif", fontSize: 13, borderRadius: 'var(--rp)' },
         }}
       />
@@ -119,7 +180,7 @@ export default function CheckoutPage() {
                 </Field>
                 <Field label="Teléfono">
                   <input
-                    className="fi" type="tel"
+                    className="fi" type="tel" required
                     placeholder="+52 81 0000 0000"
                     value={form.phone} onChange={field('phone')}
                   />
@@ -146,7 +207,7 @@ export default function CheckoutPage() {
                 </Field>
                 <Field label="Código postal">
                   <input
-                    className="fi" type="text"
+                    className="fi" type="text" required
                     placeholder="00000"
                     value={form.postal} onChange={field('postal')}
                   />
@@ -157,15 +218,53 @@ export default function CheckoutPage() {
               <SectionLabel style={{ marginTop: 28 }}>Método de envío</SectionLabel>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '16px 0 24px' }}>
-                {SHIP_OPTS.map(opt => {
-                  const on = shipping === opt.id
+                {shippingOpts.map(opt => {
+                  const on = shipping === opt.id_metodo
                   return (
                     <ShipOption
-                      key={opt.id}
-                      opt={opt}
+                      key={opt.id_metodo}
+                      opt={{ id: opt.id_metodo, label: opt.nombre, eta: opt.tiempo_estimado, price: parseFloat(opt.costo) }}
                       active={on}
-                      onSelect={() => setShipping(opt.id)}
+                      onSelect={() => setShipping(opt.id_metodo)}
                     />
+                  )
+                })}
+              </div>
+
+              {/* ── Payment method selector ── */}
+              <SectionLabel style={{ marginTop: 4 }}>Método de pago</SectionLabel>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '16px 0 8px' }}>
+                {PAYMENT_METHODS.map(pm => {
+                  const on = paymentMethod === pm.id
+                  return (
+                    <button
+                      key={pm.id}
+                      type="button"
+                      onClick={() => setPaymentMethod(pm.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '14px 18px',
+                        border: on ? '.5px solid var(--ink)' : '.5px solid var(--b)',
+                        background: on ? 'var(--ink)' : 'transparent',
+                        borderRadius: 'var(--r)',
+                        cursor: 'pointer',
+                        transition: 'all .25s cubic-bezier(.16,1,.3,1)',
+                        fontFamily: "'DM Sans',sans-serif",
+                        width: '100%', textAlign: 'left',
+                      }}
+                    >
+                      <div style={{
+                        width: 18, height: 18, borderRadius: '50%',
+                        border: on ? '1.5px solid rgba(244,242,237,.4)' : '1.5px solid var(--b2)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      }}>
+                        {on && <div style={{ width: 9, height: 9, borderRadius: '50%', background: 'var(--c)' }} />}
+                      </div>
+                      <span style={{ fontSize: 14, fontWeight: 500, color: on ? 'var(--c)' : 'var(--ink)' }}>
+                        {pm.label}
+                      </span>
+                    </button>
                   )
                 })}
               </div>
@@ -441,4 +540,136 @@ const backBtn = {
   background: 'none', border: 'none', cursor: 'pointer',
   fontFamily: "'DM Sans',sans-serif", transition: 'color .2s',
   marginBottom: 4,
+}
+
+/* ══════════════════════════════════════════════════════════
+   RECEIPT VIEW — mostrado tras un checkout exitoso
+   ══════════════════════════════════════════════════════════ */
+function ReceiptView({ receipt, user, onAccount }) {
+  const { orderId, items, subtotal, shippingCost, total, shippingMethod, eta, paymentMethod, form } = receipt
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--c)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+      <div style={{ width: '100%', maxWidth: 520 }}>
+
+        {/* Success icon */}
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: '50%',
+            background: 'var(--ink)', color: 'var(--c)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 16px',
+          }}>
+            <IconCheck size={30} stroke={2} />
+          </div>
+          <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: 28, fontWeight: 400, color: 'var(--ink)', margin: '0 0 6px' }}>
+            ¡Pedido confirmado!
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--i4)' }}>
+            Pedido <strong style={{ color: 'var(--ink)' }}>#{orderId}</strong> · Se enviará un recibo a tu correo
+          </p>
+        </div>
+
+        {/* Receipt card */}
+        <div style={{ border: '0.5px solid var(--b)', borderRadius: 'var(--rl)', overflow: 'hidden' }}>
+
+          {/* Header */}
+          <div style={{ padding: '20px 24px', background: 'var(--c2)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <IconReceipt size={18} stroke={1.5} style={{ color: 'var(--ink)' }} />
+            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink)' }}>Recibo de compra</span>
+          </div>
+
+          <div style={{ padding: '24px' }}>
+
+            {/* Customer info */}
+            <div style={{ marginBottom: 20 }}>
+              <Label>Cliente</Label>
+              <p style={{ fontSize: 13, color: 'var(--ink)', margin: '4px 0 2px' }}>{user?.name ?? (form.name || '—')}</p>
+              {user?.email && <p style={{ fontSize: 12, color: 'var(--i4)' }}>{user.email}</p>}
+            </div>
+
+            <Divider />
+
+            {/* Items */}
+            <div style={{ margin: '16px 0' }}>
+              <Label>Productos</Label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
+                {items.map((item, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--c3)', flexShrink: 0, overflow: 'hidden' }}>
+                        {item.image_url && <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--i4)' }}>x{item.qty}</div>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 13, color: 'var(--ink)', flexShrink: 0 }}>
+                      ${(item.price * item.qty).toLocaleString('es-MX')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Divider />
+
+            {/* Totals */}
+            <div style={{ margin: '16px 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--i4)', marginBottom: 6 }}>
+                <span>Subtotal</span><span>${subtotal.toLocaleString('es-MX')}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--i4)', marginBottom: 6 }}>
+                <span>Envío ({shippingMethod})</span><span>${shippingCost.toLocaleString('es-MX')}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 300, color: 'var(--ink)', paddingTop: 10, borderTop: '0.5px solid var(--b)', marginTop: 6 }}>
+                <span>Total</span><span>${total.toLocaleString('es-MX')}</span>
+              </div>
+            </div>
+
+            <Divider />
+
+            {/* Shipping info */}
+            <div style={{ margin: '16px 0' }}>
+              <Label>Entrega</Label>
+              <p style={{ fontSize: 13, color: 'var(--ink)', margin: '4px 0 2px' }}>{form.address}, {form.city}, CP {form.postal}</p>
+              <p style={{ fontSize: 12, color: 'var(--i4)' }}>{shippingMethod} · {eta}</p>
+            </div>
+
+            {paymentMethod && (
+              <>
+                <Divider />
+                <div style={{ margin: '16px 0' }}>
+                  <Label>Método de pago</Label>
+                  <p style={{ fontSize: 13, color: 'var(--ink)', margin: '4px 0' }}>{paymentMethod}</p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+          <button
+            onClick={onAccount}
+            style={{
+              flex: 1, background: 'var(--ink)', color: 'var(--c)',
+              border: 'none', borderRadius: 'var(--rp)', padding: '14px',
+              fontSize: 13, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif",
+            }}
+          >
+            Ver mis pedidos
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Label({ children }) {
+  return <p style={{ fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--i4)', margin: 0 }}>{children}</p>
+}
+function Divider() {
+  return <div style={{ height: .5, background: 'var(--b)' }} />
 }

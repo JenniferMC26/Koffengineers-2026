@@ -245,7 +245,7 @@ function LoginForm({ onSwitch }) {
       const redirect = searchParams.get('redirect') || '/catalog'
       navigate(redirect, { replace: true })
     } catch (err) {
-      const msg = err.response?.data?.message || 'Credenciales incorrectas'
+      const msg = err.response?.data?.error || 'Credenciales incorrectas'
       toast.error(msg)
       setErrors({ api: msg })
     } finally {
@@ -329,7 +329,7 @@ function RegisterForm({ onSwitch }) {
     if (!email.trim()) e.email = 'El correo es obligatorio'
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = 'Correo inválido'
     if (!password)         e.password = 'La contraseña es obligatoria'
-    else if (password.length < 6) e.password = 'Mínimo 6 caracteres'
+    else if (password.length < 8) e.password = 'Mínimo 8 caracteres'
     return e
   }
 
@@ -346,7 +346,7 @@ function RegisterForm({ onSwitch }) {
       toast.success('¡Cuenta creada! Bienvenido a CLYRO.')
       navigate('/catalog', { replace: true })
     } catch (err) {
-      const msg = err.response?.data?.message || 'No se pudo crear la cuenta'
+      const msg = err.response?.data?.error || 'No se pudo crear la cuenta'
       toast.error(msg)
       setErrors({ api: msg })
     } finally {
@@ -388,7 +388,7 @@ function RegisterForm({ onSwitch }) {
 
       <PasswordInput
         id="reg-password"
-        label="Contraseña (mín. 6 caracteres)"
+        label="Contraseña (mín. 8 caracteres)"
         value={password}
         onChange={e => setPassword(e.target.value)}
         error={errors.password}

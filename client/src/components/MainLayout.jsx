@@ -2,10 +2,10 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   IconHome,
   IconLayoutGrid,
-  IconSearch,
   IconShoppingBag,
   IconUser,
 } from '@tabler/icons-react'
+import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import CartDrawer from './CartDrawer'
 
@@ -16,17 +16,16 @@ import CartDrawer from './CartDrawer'
    CartDrawer is rendered here so it's available on every page.
    ────────────────────────────────────────────────────────── */
 
-const BASE_NAV = [
-  { to: '/',        label: 'Inicio',   Icon: IconHome        },
-  { to: '/catalog', label: 'Catálogo', Icon: IconLayoutGrid  },
-  { to: '/search',  label: 'Buscar',   Icon: IconSearch      },
-  { to: '/login',   label: 'Cuenta',   Icon: IconUser        },
-]
-
 /* ── Left rail (desktop) ──────────────────────────────────── */
 function SideNav() {
   const location  = useLocation()
   const { itemCount, setIsOpen } = useCart()
+
+  const NAV = [
+    { to: '/',        label: 'Inicio',   Icon: IconHome       },
+    { to: '/catalog', label: 'Catálogo', Icon: IconLayoutGrid },
+    { to: '/account', label: 'Cuenta',   Icon: IconUser       },
+  ]
 
   return (
     <nav
@@ -35,13 +34,13 @@ function SideNav() {
       role="navigation"
     >
       {/* Regular nav items */}
-      {BASE_NAV.map(({ to, label, Icon }) => {
+      {NAV.map(({ to, label, Icon }) => {
         const isActive = location.pathname === to ||
           (to !== '/' && location.pathname.startsWith(to))
 
         return (
           <NavLink
-            key={to}
+            key={label}
             to={to}
             className={`cr-item ${isActive ? 'active' : ''}`}
             aria-label={label}
@@ -90,7 +89,7 @@ function BottomNav() {
   const mobileItems = [
     { to: '/',        label: 'Inicio',   Icon: IconHome       },
     { to: '/catalog', label: 'Catálogo', Icon: IconLayoutGrid },
-    { to: '/login',   label: 'Cuenta',   Icon: IconUser       },
+    { to: '/account', label: 'Cuenta',   Icon: IconUser       },
   ]
 
   return (

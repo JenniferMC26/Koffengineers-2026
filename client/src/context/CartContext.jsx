@@ -21,7 +21,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react'
 import api from '../lib/api'
@@ -36,44 +35,48 @@ function loadFromStorage() {
   catch { return [] }
 }
 
+/* Convierte un item del carrito del backend al shape del frontend */
+function normalizeCartItem(raw) {
+  return {
+    id:        raw.id_producto,
+    name:      raw.nombre,
+    price:     parseFloat(raw.precio),
+    image_url: raw.imagen_url,
+    stock:     raw.stock,
+    qty:       raw.cantidad,
+    // Guardamos el id del carrito en BD para poder eliminarlo individualmente
+    cartItemId: raw.id_carrito,
+  }
+}
+
 /* ── Provider ────────────────────────────────────────────── */
 export function CartProvider({ children }) {
   const [items,  setItems]  = useState(loadFromStorage)
   const [isOpen, setIsOpen] = useState(false)
   const { isAuthenticated } = useAuth()
-  const syncTimer = useRef(null)
 
   /* ── Hydrate from server on login ───────────────────────── */
   useEffect(() => {
     if (!isAuthenticated) return
-    api.get('/cart')
+    api.get('/carrito')
       .then(({ data }) => {
         if (Array.isArray(data?.items) && data.items.length > 0) {
-          setItems(data.items)
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data.items))
+          const normalized = data.items.map(normalizeCartItem)
+          setItems(normalized)
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
         }
       })
       .catch(() => {}) // silence — localStorage fallback already loaded
   }, [isAuthenticated])
 
-  /* ── Debounced server sync ──────────────────────────────── */
-  const pushToServer = useCallback((nextItems) => {
-    if (!isAuthenticated) return
-    clearTimeout(syncTimer.current)
-    syncTimer.current = setTimeout(() => {
-      api.post('/cart', { items: nextItems }).catch(() => {})
-    }, 600)
-  }, [isAuthenticated])
-
-  /* ── Internal state committer ───────────────────────────── */
+  /* ── Internal state committer (solo localStorage) ───────── */
   const commit = useCallback((updater) => {
     setItems(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-      pushToServer(next)
       return next
     })
-  }, [pushToServer])
+  }, [])
 
   /* ── Public actions ─────────────────────────────────────── */
   const addItem = useCallback((product, qty = 1) => {
