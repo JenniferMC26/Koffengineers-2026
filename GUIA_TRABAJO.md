@@ -1,4 +1,4 @@
-# 🚀 ON MY WAY — Hackathon Blink Galaxy 2026
+# 🚀 CLYRO — Hackathon Blink Galaxy 2026
 ## Manual de Operaciones · Equipo Koffengineers
 
 > **Regla de Oro:** Si no está en Git, no existe. Commitea frecuente, pushea antes de pausas.
