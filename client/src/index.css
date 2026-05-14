@@ -1,3 +1,292 @@
+/* ═══════════════════════════════════════════════════════════
+   CLYRO — Global Styles
+   Design System: minimalismo extremo, paz visual, premium
+   Extracted from referencias-visuales/clyro_v4.html
+   ═══════════════════════════════════════════════════════════ */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── CSS Custom Properties (mirrors Tailwind tokens) ───── */
+:root {
+  --c:   #F4F2ED;
+  --c2:  #ECEAE3;
+  --c3:  #E2DED5;
+  --c4:  #D5D0C5;
+  --b:   #DEDAD1;
+  --b2:  #C8C4B8;
+  --ink: #1A1918;
+  --i2:  #38372F;
+  --i3:  #5C5A52;
+  --i4:  #9A9888;
+  --sage:#8FA88A;
+  --r:   14px;
+  --rl:  24px;
+  --rp:  40px;
+  --ease-clyro: cubic-bezier(.16,1,.3,1);
+}
+
+/* ── Base Reset ─────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--c);
+  color: var(--ink);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Typography Utilities ───────────────────────────────── */
+@layer components {
+  .font-display {
+    font-family: 'Playfair Display', serif;
+  }
+
+  /* ── Glassmorphism helpers ────────────────────────────── */
+  .glass {
+    background: rgba(244, 242, 237, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .glass-dark {
+    background: rgba(26, 25, 24, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* ── CLYRO Button variants ────────────────────────────── */
+  .btn-dark {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--ink);
+    color: var(--c);
+    border-radius: var(--rp);
+    padding: 14px 28px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    letter-spacing: .05em;
+    border: none;
+    cursor: pointer;
+    transition: transform .3s var(--ease-clyro), box-shadow .3s var(--ease-clyro);
+  }
+  .btn-dark:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(26,25,24,.15);
+  }
+
+  .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: 0.5px solid var(--b2);
+    color: var(--i3);
+    border-radius: var(--rp);
+    padding: 14px 28px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    background: transparent;
+    cursor: pointer;
+    transition: border-color .3s, color .3s;
+  }
+  .btn-outline:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+
+  /* ── Input field ─────────────────────────────────────── */
+  .clyro-input {
+    background: var(--c2);
+    border: 0.5px solid var(--b);
+    border-radius: var(--r);
+    padding: 11px 16px;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink);
+    outline: none;
+    width: 100%;
+    transition: border-color .2s, background .2s;
+  }
+  .clyro-input:focus {
+    border-color: var(--ink);
+    background: var(--c);
+  }
+
+  /* ── Chip / filter pill ──────────────────────────────── */
+  .chip {
+    font-size: 12px;
+    padding: 7px 18px;
+    border-radius: var(--rp);
+    border: 0.5px solid var(--b);
+    color: var(--i3);
+    cursor: pointer;
+    transition: all .2s;
+    background: var(--c);
+    user-select: none;
+    white-space: nowrap;
+  }
+  .chip:hover { border-color: var(--b2); }
+  .chip.active {
+    background: var(--ink);
+    color: var(--c);
+    border-color: var(--ink);
+  }
+
+  /* ── Page fade-in animation ──────────────────────────── */
+  .page-enter {
+    animation: clyro-fadein .5s var(--ease-clyro) both;
+  }
+  @keyframes clyro-fadein {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Product card hover lift ─────────────────────────── */
+  .card-lift {
+    transition: transform .35s var(--ease-clyro), box-shadow .35s var(--ease-clyro);
+  }
+  .card-lift:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 48px rgba(26,25,24,.10);
+  }
+
+  /* ── Subtle border utility ───────────────────────────── */
+  .border-clyro  { border: 0.5px solid var(--b); }
+  .border-clyro2 { border: 0.5px solid var(--b2); }
+
+  /* ── Status badges ───────────────────────────────────── */
+  .badge-success { background: #e6f2e0; color: #3a6a2a; }
+  .badge-warning { background: #f2ede0; color: #6a5a1a; }
+  .badge-info    { background: #e0ecf2; color: #1a4a6a; }
+  .badge-error   { background: #f2e8e0; color: #6a3a1a; }
+}
+
+/* ── Hide scrollbar (aesthetic) ────────────────────────── */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* ── Category rail (left sidebar) ──────────────────────── */
+.cat-rail {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--c);
+  border: 0.5px solid var(--b);
+  border-left: none;
+  border-radius: 0 20px 20px 0;
+  padding: 14px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 100;
+  box-shadow: 3px 0 24px rgba(0,0,0,.06);
+  overflow: hidden;
+  width: 52px;
+  transition: width .35s var(--ease-clyro);
+}
+.cat-rail:hover { width: 140px; }
+.cr-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 9px 10px;
+  transition: background .2s;
+  white-space: nowrap;
+  min-width: 0;
+}
+.cr-item:hover { background: var(--c2); }
+.cr-item.active { background: var(--ink); }
+.cr-item.active .cr-icon { color: var(--c); }
+.cr-item.active .cr-lbl  { color: var(--c); }
+.cr-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--i3);
+  flex-shrink: 0;
+}
+.cr-lbl {
+  font-size: 12px;
+  color: var(--i3);
+  overflow: hidden;
+  opacity: 0;
+  white-space: nowrap;
+  transition: opacity .25s ease .1s;
+  letter-spacing: .01em;
+}
+.cat-rail:hover .cr-lbl { opacity: 1; }
+
+/* ── Marquee bar ────────────────────────────────────────── */
+.marquee-bar {
+  background: var(--ink);
+  padding: 14px 0;
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+}
+.marquee-track {
+  display: inline-flex;
+  gap: 0;
+  animation: marquee 22s linear infinite;
+}
+@keyframes marquee { to { transform: translateX(-50%); } }
+.marquee-item {
+  font-size: 12px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: rgba(244,242,237,.5);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.marquee-item::after { content: '◦'; color: rgba(244,242,237,.25); }
+
+/* ── Floating nav pill (top bar from reference) ─────────── */
+.floatnav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: rgba(244,242,237,.92);
+  border-bottom: 0.5px solid var(--b);
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 60px;
+  z-index: 500;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 1px 20px rgba(26,25,24,.05);
+  transition: all .4s var(--ease-clyro);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .cat-rail { display: none; }
+  .floatnav { padding: 0 16px; gap: 2px; }
+}
