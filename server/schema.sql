@@ -95,9 +95,14 @@ CREATE TABLE detalles_pedido (
 -- DATOS SEMILLA (Informacion precargada y pruebas previas)
 -- =====================================================================
 
--- Categorias base AGREGAR MAS 
-INSERT INTO categorias (nombre) 
-VALUES ('Tecnologia'), ('Ropa y Accesorios'), ('Hogar');
+-- Categorias base (6 categorias para marketplace minimalista)
+INSERT INTO categorias (nombre) VALUES 
+('Tecnología'), 
+('Hogar'), 
+('Moda'), 
+('Salud'), 
+('Deporte'), 
+('Vehículos');
 
 -- Los 2 metodos de envio requeridos:
 INSERT INTO metodos_envio (nombre, costo, tiempo_estimado) 
