@@ -1,4 +1,4 @@
-# 🛍️ On My Way — Marketplace
+# 🛍️ CLYRO — Marketplace
 
 > **Hackathon Blink Galaxy 2026 · Equipo Koffengineers**
 
@@ -9,7 +9,7 @@ desplegable en Raspberry Pi 4.
 
 ## 📁 Estructura del Repositorio
 
-```
+```text
 Koffengineers-2026/
 ├── .gitignore
 ├── GUIA_TRABAJO.md          # Manual de operaciones y roles
@@ -31,7 +31,7 @@ Koffengineers-2026/
         ├── main.jsx
         ├── App.jsx
         ├── lib/
-        │   └── api.js           # Axios + interceptores JWT
+        │   └── api.js       # Axios + interceptores JWT
         ├── context/
         │   └── AuthContext.jsx  # Estado global de autenticación
         ├── components/
@@ -59,7 +59,7 @@ Koffengineers-2026/
 
 ### 1. Clonar el repositorio
 ```bash
-git clone https://github.com/JenniferMC26/Koffengineers-2026.git
+git clone [https://github.com/JenniferMC26/Koffengineers-2026.git](https://github.com/JenniferMC26/Koffengineers-2026.git)
 cd Koffengineers-2026
 ```
 
@@ -73,8 +73,8 @@ sudo mysql_secure_installation
 
 # Crear usuario y base de datos
 sudo mysql -u root -p << 'EOF'
-CREATE USER 'onmyway_user'@'localhost' IDENTIFIED BY 'CambiarEsto123!';
-GRANT ALL PRIVILEGES ON onmyway_db.* TO 'onmyway_user'@'localhost';
+CREATE USER 'clyro_user'@'localhost' IDENTIFIED BY 'Koffeng2026!';
+GRANT ALL PRIVILEGES ON clyro_db.* TO 'clyro_user'@'localhost';
 FLUSH PRIVILEGES;
 EOF
 
@@ -99,7 +99,7 @@ nano .env   # ← Editar DB_PASSWORD, SECRET_KEY, JWT_SECRET
 
 # Levantar servidor
 python app.py
-# API disponible en: http://0.0.0.0:5000
+# API disponible en: [http://0.0.0.0:5000](http://0.0.0.0:5000)
 ```
 
 ### 4. Frontend (React)
@@ -111,7 +111,7 @@ npm install
 
 # Desarrollo (con hot reload)
 npm run dev
-# App disponible en: http://0.0.0.0:5173
+# App disponible en: [http://0.0.0.0:5173](http://0.0.0.0:5173)
 
 # Producción
 npm run build
@@ -120,9 +120,87 @@ npm run preview   # o servir con nginx
 
 ---
 
+## 🗄️ Arquitectura de Datos
+
+El proyecto utiliza una base de datos relacional para gestionar el flujo de ventas. A continuación se detalla la estructura y relaciones:
+```mermaid
+erDiagram
+    usuarios ||--o{ carrito : tiene
+    usuarios ||--o{ pedidos : realiza
+    categorias ||--o{ productos : organiza
+    productos ||--o{ carrito : incluye
+    productos ||--o{ detalles_pedido : aparece
+    metodos_envio ||--o{ pedidos : se_usa_en
+    pedidos ||--o{ detalles_pedido : contiene
+
+    usuarios {
+        int id_usuario PK
+        string nombre_completo
+        string correo
+        string contrasena_hash
+        enum rol
+        timestamp fecha_registro
+    }
+
+    categorias {
+        int id_categoria PK
+        string nombre
+    }
+
+    productos {
+        int id_producto PK
+        int id_categoria FK
+        string nombre
+        text descripcion
+        decimal precio
+        int stock
+        string imagen_url
+    }
+
+    metodos_envio {
+        int id_metodo PK
+        string nombre
+        decimal costo
+        string tiempo_estimado
+    }
+
+    carrito {
+        int id_carrito PK
+        int id_usuario FK
+        int id_producto FK
+        int cantidad
+    }
+
+    pedidos {
+        int id_pedido PK
+        int id_usuario FK
+        int id_metodo_envio FK
+        string direccion_calle
+        string ciudad
+        string codigo_postal
+        string telefono_contacto
+        decimal total
+        enum estado
+        timestamp fecha_pedido
+    }
+
+    detalles_pedido {
+        int id_detalle PK
+        int id_pedido FK
+        int id_producto FK
+        int cantidad
+        decimal precio_unitario
+    }
+```
+### Notas Técnicas:
+- **Seguridad:** Las contraseñas se almacenan mediante `contrasena_hash`.
+- **Integridad:** Se utilizan claves foráneas (FK) para asegurar la relación entre pedidos, productos y usuarios.
+- **Escalabilidad:** El diseño permite añadir múltiples métodos de envío y categorías sin afectar la lógica core del negocio.
+---
+
 ## 🌐 Acceso en Red Local (Jurado)
 
-```
+```bash
 # Descubrir IP de la Raspberry Pi
 ip addr show | grep "inet " | grep -v 127.0.0.1
 
@@ -135,7 +213,7 @@ http://<IP_RASPI>:80     # Producción (con nginx)
 ```bash
 sudo apt install -y nginx
 
-# /etc/nginx/sites-available/onmyway
+# /etc/nginx/sites-available/clyro
 server {
     listen 80;
     root /home/pi/Koffengineers-2026/client/dist;
@@ -152,17 +230,9 @@ server {
     }
 }
 
-sudo ln -s /etc/nginx/sites-available/onmyway /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/clyro /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
-
----
-
-## 🔑 Credenciales de Prueba
-
-| Rol   | Email                | Password  |
-|-------|----------------------|-----------|
-| Admin | admin@onmyway.com    | Admin123! |
 
 ---
 
@@ -227,7 +297,6 @@ git tag -a v1.0.0 -m "Release final hackathon"
 - **Contraseñas:** Hashing con `bcrypt` (salt rounds = 12)
 - **Autenticación:** JWT con expiración de 24 horas
 - **Roles:** Middleware `admin_required` protege endpoints del panel
-- **SQL Injection:** Consultas con parámetros `%s` en PyMySQL (nunca f-strings con input del usuario)
 - **CORS:** Configurable via `CORS_ORIGINS` en `.env`
 
 ---
