@@ -1,4 +1,4 @@
-# 🛍️ Clyro — Marketplace
+# 🛍️ CLYRO — Marketplace
 
 > **Hackathon Blink Galaxy 2026 · Equipo Koffengineers**
 
